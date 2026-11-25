@@ -90,20 +90,19 @@ export const MiningRingHero: React.FC = () => {
 
         {/* 
           Inner 3D Pickaxe & Neon-Blue Crystals
-          Centered 1:1 cropped square with mix-blend-screen so the pure black background
-          becomes 100% transparent and seamlessly blends over the moving starry sky!
+          Transparent RGBA PNG perfectly centered inside the glowing ring,
+          allowing the background drifting stars and cosmic nebula to show through!
         */}
-        <div className="absolute inset-3.5 rounded-full overflow-hidden flex items-center justify-center z-10 pointer-events-none">
+        <div className="absolute inset-3 rounded-full flex items-center justify-center z-10 pointer-events-none">
           <img
-            src="./pickaxe-core.jpg"
+            src="./pickaxe-core.png"
             onError={(e) => {
-              // Fallback to direct URL if needed
-              (e.currentTarget as HTMLImageElement).src = 'https://i.postimg.cc/Y9Dbyc0Y/IMG-0959.jpg';
+              (e.currentTarget as HTMLImageElement).src = './pickaxe-core.jpg';
             }}
             alt="3D Mining Pickaxe & Obsidian Crystals"
-            className={`w-[90%] h-[90%] object-contain mix-blend-screen transition-all duration-500 ${
+            className={`w-[86%] h-[86%] object-contain mix-blend-screen transition-all duration-500 ${
               isMining
-                ? 'brightness-125 contrast-125 drop-shadow-[0_0_25px_rgba(46,123,255,0.85)]'
+                ? 'brightness-125 contrast-125 drop-shadow-[0_0_24px_rgba(46,123,255,0.9)]'
                 : 'brightness-75 grayscale-[30%] opacity-65'
             }`}
           />
