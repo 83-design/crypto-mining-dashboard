@@ -88,19 +88,25 @@ export const MiningRingHero: React.FC = () => {
           )}
         </svg>
 
-        {/* Inner 3D Pickaxe & Neon-Blue Crystals from Direct URL */}
+        {/* 
+          Inner 3D Pickaxe & Neon-Blue Crystals from Direct URL
+          The screenshot image has the pickaxe centered at X:50%, Y:31.5%.
+          We set object-position: 50% 31.5% with scale-[2.85] and mix-blend-screen
+          so only the metallic pickaxe and glowing blue crystals show vividly,
+          with the black background completely transparent over the moving starry sky!
+        */}
         <div className="absolute inset-2.5 rounded-full overflow-hidden flex items-center justify-center z-10 pointer-events-none">
           <div className="relative w-full h-full flex items-center justify-center">
-            {/* Glowing radial backdrop inside the core */}
-            <div className="absolute inset-0 bg-radial from-blue-600/20 via-blue-900/10 to-transparent blur-md -z-10" />
-
             <img
               src="https://i.postimg.cc/Y9Dbyc0Y/IMG-0959.jpg"
               alt="3D Mining Pickaxe & Obsidian Crystals"
-              className={`w-full h-full object-cover scale-[1.75] mix-blend-screen transition-all duration-500 ${
+              style={{
+                objectPosition: '50% 31.5%',
+              }}
+              className={`w-full h-full object-cover scale-[2.85] mix-blend-screen transition-all duration-500 ${
                 isMining
-                  ? 'brightness-110 contrast-110 drop-shadow-[0_0_20px_rgba(46,123,255,0.7)]'
-                  : 'brightness-75 grayscale-[30%] opacity-70'
+                  ? 'brightness-125 contrast-125 drop-shadow-[0_0_24px_rgba(46,123,255,0.8)]'
+                  : 'brightness-75 grayscale-[30%] opacity-65'
               }`}
             />
           </div>
