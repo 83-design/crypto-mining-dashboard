@@ -1,69 +1,88 @@
 import React, { useState } from 'react';
 import { useMiningStore } from '../store/useMiningStore';
-import { Server, Cpu, Plus, CheckCircle2, ShieldCheck, Zap, Trash2, Copy, Check } from 'lucide-react';
+import { Server, Cpu, Terminal, Copy, Check, Zap, CheckCircle2, ChevronRight, ShieldCheck, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CloudServerTier } from '../types/mining';
 
 export const RigsCloudView: React.FC = () => {
-  const { telemetry, activateCloudTier, cancelCloudTier, linkDevice, removeDevice } = useMiningStore();
-  const [showPairModal, setShowPairModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [newRigName, setNewRigName] = useState('MacBook M3 Max');
-  const [newRigCpu, setNewRigCpu] = useState('Apple M3 Max 16-Core');
-  const [newRigHash, setNewRigHash] = useState('24.5');
+  const { telemetry, activeWallet, setSelectedServerTier } = useMiningStore();
+  const [selectedMinerType, setSelectedMinerType] = useState<'ccminer' | 'xmrig'>('ccminer');
+  const [copiedCmd, setCopiedCmd] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
 
-  const pairCommand = 'curl -sL https://nexus.mine/pair?token=VRSC-9821-RIG | sh';
+  const walletAddr = activeWallet?.address || 'UQCDcSB00TOddH1qm-vwnOsSUTZuxzDC31_lcKe09j_D_8Rg';
 
-  const copyToClipboard = () => {
-    navigator.clipboard?.writeText(pairCommand);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Real ccminer command for VerusHash
+  const ccminerCommand = `ccminer -a verus -o stratum+tcp://eu.vipor.net:5040 -u ${walletAddr}.Rig1 -p x -t 8`;
+
+  // Real XMRig JSON configuration
+  const xmrigConfig = JSON.stringify(
+    {
+      autosave: true,
+      cpu: { enabled: true, "huge-pages": true, "max-threads-hint": 100 },
+      pools: [
+        {
+          url: "pool.supportxmr.com:3333",
+          user: walletAddr,
+          pass: "worker1",
+          rig_id: "PC_Worker",
+          nicehash: false,
+          keepalive: true,
+          tls: false
+        }
+      ]
+    },
+    null,
+    2
+  );
+
+  const copyCommand = () => {
+    navigator.clipboard?.writeText(ccminerCommand);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
   };
 
-  const handleAddCustomRig = () => {
-    linkDevice(newRigName, 'desktop', newRigCpu, parseFloat(newRigHash) || 20);
-    setShowPairModal(false);
+  const copyJson = () => {
+    navigator.clipboard?.writeText(xmrigConfig);
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
   };
+
+  const activeCloudCount = telemetry.cloudNodes.filter((c) => c.active).length;
 
   return (
-    <div className="w-full flex-1 overflow-y-auto px-5 py-4 pb-24 text-white">
-      {/* Title */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-[20px] font-bold tracking-tight">Rigs & Cloud Fleet</h2>
-          <p className="text-[12px] text-[#6E7A94]">Manage linked physical devices & cloud hash nodes</p>
-        </div>
-        <button
-          onClick={() => setShowPairModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2E7BFF]/20 border border-[#2E7BFF]/50 text-[#38BDF8] text-[12px] font-semibold hover:bg-[#2E7BFF]/30 active:scale-95 transition-all shadow-[0_0_15px_rgba(46,123,255,0.25)]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Pair Rig</span>
-        </button>
+    <div className="w-full flex-1 overflow-y-auto px-5 py-3 pb-24 text-white select-none">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-[20px] font-bold tracking-tight">Rigs & Cloud Servers</h2>
+        <p className="text-[12px] text-[#6E7A94]">Аренда облачных нод и конфигурация внешних ригов</p>
       </div>
 
-      {/* Aggregate Stats Banner */}
-      <div className="w-full glass-panel rounded-2xl p-4 border border-[#2E7BFF]/25 mb-6 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+      {/* Aggregate Status Banner */}
+      <div className="w-full glass-panel rounded-2xl p-4 border border-[#2E7BFF]/25 mb-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-[#6E7A94] font-medium">Total Fleet Hashrate</span>
+          <span className="text-[10px] uppercase tracking-wider text-[#6E7A94] font-bold">Хэшрейт пула</span>
           <div className="text-[22px] font-black text-white mt-0.5">{telemetry.formattedHashrate}</div>
+          <span className="text-[10px] text-[#38BDF8] font-semibold">Web Worker: {telemetry.realHashrateDisplay}</span>
         </div>
         <div className="text-right">
-          <span className="text-[11px] uppercase tracking-wider text-[#6E7A94] font-medium">Active Workers</span>
-          <div className="text-[18px] font-bold text-[#2E7BFF] mt-0.5">
-            {telemetry.linkedDevices.length} physical + {telemetry.cloudNodes.filter(c => c.active).length} cloud
+          <span className="text-[10px] uppercase tracking-wider text-[#6E7A94] font-bold">Серверы в работе</span>
+          <div className="text-[16px] font-bold text-[#2E7BFF] mt-0.5">
+            {activeCloudCount} облачных
           </div>
+          <span className="text-[10px] text-emerald-400 font-medium">● Пул онлайн (24ms)</span>
         </div>
       </div>
 
-      {/* SECTION 1: Rent Cloud Servers (Subscription Tiers) */}
+      {/* SECTION 1: Rent Cloud Servers */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Server className="w-4 h-4 text-[#2E7BFF]" />
-            <h3 className="text-[15px] font-bold text-white tracking-tight">Rent Cloud Servers</h3>
+            <h3 className="text-[15px] font-bold text-white tracking-tight">Аренда Cloud Серверов</h3>
           </div>
-          <span className="text-[11px] text-[#38BDF8] font-semibold bg-[#2E7BFF]/10 px-2 py-0.5 rounded-full border border-[#2E7BFF]/20">
-            Zero Battery Drain
+          <span className="text-[10px] text-[#38BDF8] font-bold bg-[#2E7BFF]/10 px-2 py-0.5 rounded-full border border-[#2E7BFF]/25">
+            USDT (TON Network)
           </span>
         </div>
 
@@ -75,22 +94,22 @@ export const RigsCloudView: React.FC = () => {
               className={`w-full glass-panel rounded-2xl p-4 border transition-all ${
                 tier.active
                   ? 'border-[#2E7BFF] bg-[#0E1B33]/85 shadow-[0_0_20px_rgba(46,123,255,0.25)]'
-                  : 'border-[#2E7BFF]/15 hover:border-[#2E7BFF]/35'
+                  : 'border-[#2E7BFF]/20 hover:border-[#2E7BFF]/40'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-[15px] font-bold text-white">{tier.name}</h4>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#2E7BFF]/20 text-[#38BDF8] border border-[#2E7BFF]/30">
+                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#2E7BFF]/20 text-[#38BDF8] border border-[#2E7BFF]/30">
                       {tier.badge}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#6E7A94] mt-1 max-w-[260px]">{tier.description}</p>
+                  <p className="text-[11px] text-[#6E7A94] mt-1 max-w-[240px] leading-relaxed">{tier.description}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-[18px] font-black text-white">${tier.priceMonthly}</div>
-                  <span className="text-[10px] text-[#6E7A94]">/ month</span>
+                  <div className="text-[18px] font-black text-white">{tier.priceUsdt} USDT</div>
+                  <span className="text-[10px] text-[#6E7A94]">/ месяц</span>
                 </div>
               </div>
 
@@ -104,26 +123,23 @@ export const RigsCloudView: React.FC = () => {
                 ))}
               </div>
 
-              {/* Action Button */}
+              {/* Action Button -> opens ServerPurchaseModal */}
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-[12px] font-bold text-[#38BDF8] flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 fill-[#38BDF8]" />
-                  +{tier.hashrateMH} MH/s Instant Power
+                  +{tier.hashrateDisplay}
                 </span>
 
                 {tier.active ? (
-                  <button
-                    onClick={() => cancelCloudTier(tier.id)}
-                    className="px-4 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-[12px] font-bold transition-all active:scale-95"
-                  >
-                    Active ({tier.nodeCount}x) • Cancel
-                  </button>
+                  <span className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/35 text-[12px] font-bold">
+                    ✓ Активен ({tier.nodeCount}x)
+                  </span>
                 ) : (
                   <button
-                    onClick={() => activateCloudTier(tier.id)}
+                    onClick={() => setSelectedServerTier(tier)}
                     className="px-4 py-1.5 rounded-xl bg-[#2E7BFF] hover:bg-blue-600 text-white text-[12px] font-bold shadow-[0_0_15px_#2E7BFF] transition-all active:scale-95"
                   >
-                    Subscribe & Boost
+                    Арендовать ({tier.priceUsdt} USDT)
                   </button>
                 )}
               </div>
@@ -132,134 +148,117 @@ export const RigsCloudView: React.FC = () => {
         </div>
       </div>
 
-      {/* SECTION 2: My Linked Devices */}
+      {/* SECTION 2: Companion Miner Config Generator */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[#2E7BFF]" />
+            <h3 className="text-[15px] font-bold text-white tracking-tight">Генератор майнера (PC / Android)</h3>
+          </div>
+          <span className="text-[10px] text-[#6E7A94]">ccminer & XMRig</span>
+        </div>
+
+        <p className="text-[11px] text-[#6E7A94] mb-3">
+          1-клик команда с авто-подстановкой вашего привязанного кошелька для майнинга на реальном железе:
+        </p>
+
+        {/* Miner Type Tabs */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button
+            onClick={() => setSelectedMinerType('ccminer')}
+            className={`py-2 px-3 rounded-xl text-[12px] font-bold border transition-all ${
+              selectedMinerType === 'ccminer'
+                ? 'bg-[#152544] border-[#2E7BFF] text-white shadow-[0_0_12px_rgba(46,123,255,0.3)]'
+                : 'bg-[#090F1C] border-white/10 text-slate-400'
+            }`}
+          >
+            ccminer (VerusHash 2.2b)
+          </button>
+          <button
+            onClick={() => setSelectedMinerType('xmrig')}
+            className={`py-2 px-3 rounded-xl text-[12px] font-bold border transition-all ${
+              selectedMinerType === 'xmrig'
+                ? 'bg-[#152544] border-[#2E7BFF] text-white shadow-[0_0_12px_rgba(46,123,255,0.3)]'
+                : 'bg-[#090F1C] border-white/10 text-slate-400'
+            }`}
+          >
+            XMRig (Monero RandomX)
+          </button>
+        </div>
+
+        {/* Code Snippet Box */}
+        {selectedMinerType === 'ccminer' ? (
+          <div className="p-3.5 rounded-2xl bg-[#050811] border border-[#2E7BFF]/30 font-mono text-[11px] text-[#38BDF8] relative">
+            <div className="break-all pr-12 leading-relaxed">
+              {ccminerCommand}
+            </div>
+            <button
+              onClick={copyCommand}
+              className="absolute right-3 top-3 p-2 rounded-xl bg-[#2E7BFF]/20 hover:bg-[#2E7BFF]/40 text-[#38BDF8] transition-colors"
+              title="Скопировать команду"
+            >
+              {copiedCmd ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl bg-[#050811] border border-[#2E7BFF]/30 font-mono text-[11px] text-[#38BDF8] relative">
+            <pre className="overflow-x-auto text-[10px] leading-tight text-slate-300 pr-12">
+              {xmrigConfig}
+            </pre>
+            <button
+              onClick={copyJson}
+              className="absolute right-3 top-3 p-2 rounded-xl bg-[#2E7BFF]/20 hover:bg-[#2E7BFF]/40 text-[#38BDF8] transition-colors"
+              title="Скопировать config.json"
+            >
+              {copiedJson ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3: Linked Hardware Nodes */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-[#2E7BFF]" />
-            <h3 className="text-[15px] font-bold text-white tracking-tight">My Linked Devices</h3>
+            <h3 className="text-[15px] font-bold text-white tracking-tight">Подключенные устройства</h3>
           </div>
-          <span className="text-[11px] text-[#6E7A94]">
-            {telemetry.linkedDevices.length} Connected
-          </span>
+          <span className="text-[11px] text-[#6E7A94]">{telemetry.linkedDevices.length} устройства</span>
         </div>
 
-        <div className="space-y-2.5">
-          {telemetry.linkedDevices.map((device) => (
+        <div className="space-y-2">
+          {telemetry.linkedDevices.map((dev) => (
             <div
-              key={device.id}
-              className="w-full glass-panel rounded-2xl p-3.5 border border-[#2E7BFF]/15 flex items-center justify-between"
+              key={dev.id}
+              className="p-3 rounded-2xl glass-panel border border-[#2E7BFF]/15 flex items-center justify-between"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#15223A] border border-[#2E7BFF]/30 flex items-center justify-center text-[#2E7BFF] flex-shrink-0">
-                  <Cpu className="w-5 h-5" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#15223A] border border-[#2E7BFF]/30 flex items-center justify-center text-[#2E7BFF]">
+                  <Cpu className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-bold text-white tracking-tight">{device.name}</span>
-                    {device.isCurrentDevice && (
-                      <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        THIS DEVICE
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-bold text-white">{dev.name}</span>
+                    {dev.isCurrentDevice && (
+                      <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        ЭТО УСТРОЙСТВО
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#6E7A94] truncate max-w-[200px]">{device.cpu}</p>
+                  <span className="text-[10px] text-[#6E7A94]">{dev.cpu}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-[13px] font-bold text-white">{device.hashrateMH} MH/s</div>
-                  <div className="text-[10px] text-[#38BDF8] flex items-center justify-end gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34D399]" />
-                    {device.temp}°C
-                  </div>
-                </div>
-
-                {!device.isCurrentDevice && (
-                  <button
-                    onClick={() => removeDevice(device.id)}
-                    className="p-1.5 rounded-lg text-[#6E7A94] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="Unlink Rig"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+              <div className="text-right">
+                <span className="text-[13px] font-bold text-white block">
+                  {dev.isCurrentDevice ? telemetry.realHashrateDisplay : `${dev.hashrateMH} MH/s`}
+                </span>
+                <span className="text-[10px] text-emerald-400">● {dev.temp}°C Онлайн</span>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Modal: Pair New Device */}
-      {showPairModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm glass-panel rounded-3xl p-5 border border-[#2E7BFF]/30 shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
-          >
-            <h3 className="text-[17px] font-bold text-white">Link Mining Rig</h3>
-            <p className="text-[12px] text-[#6E7A94] mt-1">
-              Run this one-line pairing command on your PC, Linux box, or Android Termux to stream hashrate into your dashboard.
-            </p>
-
-            {/* Terminal Snippet */}
-            <div className="mt-3 p-3 bg-black/60 rounded-xl border border-white/10 font-mono text-[11px] text-[#38BDF8] break-all flex items-center justify-between gap-2">
-              <span>{pairCommand}</span>
-              <button
-                onClick={copyToClipboard}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex-shrink-0"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {/* Quick Demo Simulator Adder */}
-            <div className="mt-4 pt-3 border-t border-white/10">
-              <span className="text-[11px] font-bold uppercase text-[#6E7A94]">Or Add Simulated Worker:</span>
-              <div className="mt-2 space-y-2">
-                <input
-                  type="text"
-                  value={newRigName}
-                  onChange={(e) => setNewRigName(e.target.value)}
-                  placeholder="Device Name"
-                  className="w-full bg-[#0D1525] border border-white/10 rounded-xl px-3 py-1.5 text-[12px] text-white focus:outline-none focus:border-[#2E7BFF]"
-                />
-                <input
-                  type="text"
-                  value={newRigCpu}
-                  onChange={(e) => setNewRigCpu(e.target.value)}
-                  placeholder="CPU Model"
-                  className="w-full bg-[#0D1525] border border-white/10 rounded-xl px-3 py-1.5 text-[12px] text-white focus:outline-none focus:border-[#2E7BFF]"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={newRigHash}
-                    onChange={(e) => setNewRigHash(e.target.value)}
-                    placeholder="Hashrate (MH/s)"
-                    className="flex-1 bg-[#0D1525] border border-white/10 rounded-xl px-3 py-1.5 text-[12px] text-white focus:outline-none focus:border-[#2E7BFF]"
-                  />
-                  <button
-                    onClick={handleAddCustomRig}
-                    className="px-4 py-1.5 bg-[#2E7BFF] rounded-xl text-[12px] font-bold text-white shadow-[0_0_10px_#2E7BFF]"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowPairModal(false)}
-              className="mt-4 w-full py-2 rounded-xl bg-white/10 text-[13px] font-semibold text-slate-300 hover:bg-white/15"
-            >
-              Close
-            </button>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };

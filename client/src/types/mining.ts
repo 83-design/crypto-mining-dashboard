@@ -1,5 +1,19 @@
 export type MiningMode = 'eco' | 'turbo';
 
+export type WalletType = 'ton' | 'vrsc' | 'xmr' | 'usdt_ton';
+
+export interface WalletConnection {
+  id: string;
+  type: WalletType;
+  name: string;
+  address: string;
+  shortAddress: string;
+  network: string;
+  icon: string;
+  balance: number;
+  active: boolean;
+}
+
 export interface DeviceRig {
   id: string;
   name: string;
@@ -14,16 +28,16 @@ export interface DeviceRig {
   isCurrentDevice?: boolean;
 }
 
-export interface CloudNodeTier {
+export interface CloudServerTier {
   id: string;
   name: string;
   badge: string;
   hashrateMH: number;
-  priceMonthly: number;
+  hashrateDisplay: string;
+  priceUsdt: number;
   description: string;
   features: string[];
   active: boolean;
-  expiresAt?: string;
   nodeCount: number;
 }
 
@@ -41,37 +55,46 @@ export interface PayoutTransaction {
 export interface MiningTelemetry {
   isMining: boolean;
   sessionSeconds: number;
-  currentCoin: 'VRSC' | 'XMR' | 'BTC';
+  currentCoin: 'VRSC' | 'XMR';
   coinSymbol: string;
   coinPriceUsd: number;
   
+  // Real compute metrics
+  realHashrateHps: number;
+  realHashrateDisplay: string;
   totalHashrateMH: number;
   formattedHashrate: string;
+  activeThreads: number;
   
+  // Health & Thermal (Eco Safe)
   deviceTemp: number;
   batteryPercent: number;
   mode: MiningMode;
   autoThrottled: boolean;
   
+  // Earnings
   sessionYield: number;
   totalMined: number;
   balanceUsd: number;
   balanceCoin: number;
   change24h: number;
   
+  // Pool stats & Stratum proxy
+  stratumProxyUrl: string;
   poolUrl: string;
   poolStatus: 'connected' | 'reconnecting' | 'paused';
   poolLatencyMs: number;
   sharesAccepted: number;
   sharesRejected: number;
   
+  // Fleet & Cloud
   linkedDevices: DeviceRig[];
-  cloudNodes: CloudNodeTier[];
+  cloudNodes: CloudServerTier[];
   recentPayouts: PayoutTransaction[];
   
-  dailyBonusAvailable: boolean;
-  dailyBonusReward: number;
-  streakDays: number;
+  // Referral bonus boost
+  referralBoostPercent: number;
+  hasClaimedBonus: boolean;
 }
 
 export type ActiveTab = 'home' | 'rigs' | 'rewards' | 'settings';
