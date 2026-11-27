@@ -1,15 +1,15 @@
 // Stratum Protocol Engine & In-Browser WebAssembly Miner Manager
 // Bridges real WASM threads with the WebSocket-to-TCP Stratum proxy and real pool shares
 
-export const DEFAULT_PROXY_URL = 'wss://crypto-stratum-ws-proxy.onrender.com';
+export const DEFAULT_PROXY_URL = 'wss://mortality-attending-learn-proportion.trycloudflare.com';
 export const LOCAL_PROXY_URL = 'ws://localhost:8080';
 
 // Real public CPU mining pool targets for Monero / Zephyr
 export const DEFAULT_POOL = 'pool.supportxmr.com:3333';
 export const ZEPHYR_POOL = 'zephyr.herominers.com:1123';
 
-// Fallback wallet address for Monero (XMR)
-const DEFAULT_WALLET = '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otRmvJMbxJ445678';
+// Real Monero (XMR) address accepted by SupportXMR pool
+const DEFAULT_WALLET = '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A';
 
 export interface StratumJob {
   blob: string;
