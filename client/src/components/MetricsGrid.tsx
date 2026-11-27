@@ -9,7 +9,9 @@ export const MetricsGrid: React.FC = () => {
   const displayHashrate =
     totalHashrateMH >= 1000
       ? `${(totalHashrateMH / 1000).toFixed(2)} GH/s`
-      : `${totalHashrateMH.toFixed(1)} MH/s`;
+      : totalHashrateMH > 0
+      ? `${totalHashrateMH.toFixed(1)} MH/s`
+      : telemetry.realHashrateDisplay;
 
   return (
     <div className="w-full px-5 my-1.5 select-none">

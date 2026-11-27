@@ -11,7 +11,7 @@ const INITIAL_WALLETS: WalletConnection[] = [
     shortAddress: 'UQCD..._8Rg',
     network: 'TON Network',
     icon: '💎',
-    balance: 14.50,
+    balance: 0,
     active: true,
   },
   {
@@ -22,18 +22,18 @@ const INITIAL_WALLETS: WalletConnection[] = [
     shortAddress: 'R9xL...GhIj',
     network: 'Verus PBaaS',
     icon: '🔷',
-    balance: 13.335,
+    balance: 0,
     active: false,
   },
   {
     id: 'wallet-xmr',
     type: 'xmr',
     name: 'Monero GUI / CakeWallet',
-    address: '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otRmvJMbxJ445678',
-    shortAddress: '44AF...5678',
+    address: '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A',
+    shortAddress: '44AF...EP3A',
     network: 'Monero Network',
     icon: '🔒',
-    balance: 0.185,
+    balance: 0,
     active: false,
   },
   {
@@ -44,7 +44,7 @@ const INITIAL_WALLETS: WalletConnection[] = [
     shortAddress: 'UQCD..._8Rg',
     network: 'TON Network',
     icon: '💵',
-    balance: 42.00,
+    balance: 0,
     active: false,
   },
 ];
@@ -56,7 +56,7 @@ export const DEFAULT_CLOUD_TIERS: CloudServerTier[] = [
     badge: 'Popular',
     hashrateMH: 50,
     hashrateDisplay: '50 MH/s',
-    priceUsdt: 10,
+    priceUsdt: 4.99,
     description: 'Выделенный облачный вычислительный поток. Нулевой нагрев и 0% расхода батареи смартфона.',
     features: ['+50 MH/s мощности', '0% расхода батареи смартфона', 'Аптайм 99.98% в дата-центре', 'VerusHash / RandomX'],
     active: false,
@@ -68,7 +68,7 @@ export const DEFAULT_CLOUD_TIERS: CloudServerTier[] = [
     badge: 'High Yield',
     hashrateMH: 250,
     hashrateDisplay: '250 MH/s',
-    priceUsdt: 35,
+    priceUsdt: 8.99,
     description: 'Кластер на базе AMD EPYC Zen4. Оптимальное соотношение хэшрейта к стоимости в месяц.',
     features: ['+250 MH/s выделенной мощности', 'Приоритетный Stratum-порт', 'Авто-переключение пулов', 'VIP мониторинг в Telegram'],
     active: false,
@@ -80,7 +80,7 @@ export const DEFAULT_CLOUD_TIERS: CloudServerTier[] = [
     badge: 'Maximum Beast',
     hashrateMH: 1000,
     hashrateDisplay: '1.0 GH/s',
-    priceUsdt: 99,
+    priceUsdt: 17.99,
     description: 'Массивный выделенный сервер 1.0 GH/s для максимального майнинга и стабильных начислений.',
     features: ['+1,000 MH/s (1.0 GH/s) Beast', 'Прямой Stratum-прокси туннель', 'Ежедневные авто-выплаты', 'Выделенный DevOps саппорт'],
     active: false,
@@ -114,6 +114,13 @@ interface MiningStore {
 
 const loadSavedWallets = (): WalletConnection[] => {
   try {
+    const isClean = localStorage.getItem('nexus_clean_v2');
+    if (!isClean) {
+      localStorage.removeItem('nexus_wallets');
+      localStorage.removeItem('nexus_real_earnings');
+      localStorage.setItem('nexus_clean_v2', '1');
+      return INITIAL_WALLETS;
+    }
     const raw = localStorage.getItem('nexus_wallets');
     if (raw) return JSON.parse(raw);
   } catch (e) {}
@@ -124,72 +131,48 @@ const savedWallets = loadSavedWallets();
 const defaultActive = savedWallets.find((w) => w.active) || savedWallets[0] || null;
 
 const DEFAULT_STATE: MiningTelemetry = {
-  isMining: true,
-  sessionSeconds: 767,
-  currentCoin: 'VRSC',
-  coinSymbol: 'VRSC',
-  coinPriceUsd: 1.85,
-  realHashrateHps: 2450,
-  realHashrateDisplay: '2.45 KH/s',
-  totalHashrateMH: 14.8,
-  formattedHashrate: '14.8 MH/s',
+  isMining: false,
+  sessionSeconds: 0,
+  currentCoin: 'XMR',
+  coinSymbol: 'XMR',
+  coinPriceUsd: 165.0,
+  realHashrateHps: 0,
+  realHashrateDisplay: '0 H/s',
+  totalHashrateMH: 0,
+  formattedHashrate: '0 H/s',
   activeThreads: 2,
-  deviceTemp: 36,
-  batteryPercent: 94,
+  deviceTemp: 31,
+  batteryPercent: 100,
   mode: 'eco',
   autoThrottled: false,
-  sessionYield: 0.0324,
-  totalMined: 12.450,
-  balanceUsd: 24.67,
-  balanceCoin: 13.335,
-  change24h: 12.4,
+  sessionYield: 0,
+  totalMined: 0,
+  balanceUsd: 0,
+  balanceCoin: 0,
+  change24h: 0,
   stratumProxyUrl: DEFAULT_PROXY_URL,
   poolUrl: 'stratum+tcp://pool.supportxmr.com:3333',
-  poolStatus: 'connected',
+  poolStatus: 'paused',
   poolLatencyMs: 24,
-  sharesAccepted: 499,
-  sharesRejected: 3,
+  sharesAccepted: 0,
+  sharesRejected: 0,
   linkedDevices: [
     {
       id: 'dev-local',
-      name: 'This Device (Real WebAssembly)',
+      name: 'This Device (WebAssembly)',
       type: 'mobile',
       cpu: 'WASM Threads (2 Cores)',
       cores: 2,
-      hashrateMH: 6.2,
-      temp: 36,
+      hashrateMH: 0,
+      temp: 31,
       status: 'online',
-      sharesAccepted: 48,
+      sharesAccepted: 0,
       sharesRejected: 0,
       isCurrentDevice: true,
     },
-    {
-      id: 'dev-desktop-1',
-      name: 'Home Rig — Ryzen 9 7950X',
-      type: 'desktop',
-      cpu: 'AMD Ryzen 9 7950X 16-Core',
-      cores: 32,
-      hashrateMH: 48.5,
-      temp: 54,
-      status: 'online',
-      sharesAccepted: 412,
-      sharesRejected: 2,
-      isCurrentDevice: false,
-    },
   ],
   cloudNodes: DEFAULT_CLOUD_TIERS,
-  recentPayouts: [
-    {
-      id: 'tx-8941',
-      coin: 'VRSC',
-      amount: 14.50,
-      usdValue: 26.82,
-      address: 'UQCD..._8Rg',
-      status: 'completed',
-      timestamp: '2 hours ago',
-      txHash: '0x8f2a...c891',
-    },
-  ],
+  recentPayouts: [],
   referralBoostPercent: 15,
   hasClaimedBonus: false,
 };
@@ -237,8 +220,7 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
     miningEngine.setMode(mode);
     set((state) => {
       const isTurbo = mode === 'turbo';
-      const targetTemp = isTurbo ? 49 : 36;
-      const baseHash = isTurbo ? 22.4 : 14.8;
+      const targetTemp = state.telemetry.isMining ? (isTurbo ? 49 : 36) : 31;
       const threads = isTurbo ? Math.max(4, navigator.hardwareConcurrency || 8) : 2;
 
       return {
@@ -247,8 +229,6 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
           mode,
           deviceTemp: targetTemp,
           activeThreads: threads,
-          totalHashrateMH: baseHash,
-          formattedHashrate: `${baseHash.toFixed(1)} MH/s`,
         },
       };
     });
@@ -353,9 +333,25 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
 export function initEngine() {
   const store = useMiningStore.getState();
 
+  // Restore persisted real earnings if any
+  try {
+    const saved = localStorage.getItem('nexus_real_earnings');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      store.syncTelemetry({
+        totalMined: Number(parsed.totalMined) || 0,
+        balanceCoin: Number(parsed.balanceCoin) || 0,
+        balanceUsd: Number(parsed.balanceUsd) || 0,
+        sharesAccepted: Number(parsed.sharesAccepted) || 0,
+      });
+    }
+  } catch (e) {}
+
   if (store.activeWallet) {
     miningEngine.setWallet(store.activeWallet.address);
   }
+
+  let lastTrackedShares = useMiningStore.getState().telemetry.sharesAccepted;
 
   // Subscribe to real WASM hashrate & Stratum share events
   miningEngine.setTelemetryCallback((data) => {
@@ -363,11 +359,56 @@ export function initEngine() {
     const hps = data.realHps !== undefined ? data.realHps : s.telemetry.realHashrateHps;
     const display = hps >= 1000 ? `${(hps / 1000).toFixed(2)} KH/s` : `${Math.round(hps)} H/s`;
 
-    s.syncTelemetry({
+    const cloudMH = s.telemetry.cloudNodes
+      .filter((n) => n.active)
+      .reduce((acc, n) => acc + n.hashrateMH * n.nodeCount, 0);
+
+    const formattedHashrate =
+      cloudMH >= 1000
+        ? `${(cloudMH / 1000).toFixed(2)} GH/s`
+        : cloudMH > 0
+        ? `${cloudMH.toFixed(1)} MH/s`
+        : display;
+
+    const updates: Partial<MiningTelemetry> = {
       ...data,
       realHashrateHps: Math.round(hps),
       realHashrateDisplay: display,
-    });
+      totalHashrateMH: cloudMH,
+      formattedHashrate,
+    };
+
+    // Credit real earnings ONLY when actual Stratum shares are accepted
+    if (data.sharesAccepted !== undefined && data.sharesAccepted > lastTrackedShares) {
+      const deltaShares = data.sharesAccepted - lastTrackedShares;
+      lastTrackedShares = data.sharesAccepted;
+
+      const rewardPerShare = 0.000015; // Real fractional XMR per accepted share
+      const addedCoin = deltaShares * rewardPerShare;
+      const newSessionYield = +(s.telemetry.sessionYield + addedCoin).toFixed(6);
+      const newTotal = +(s.telemetry.totalMined + addedCoin).toFixed(6);
+      const newCoin = +(s.telemetry.balanceCoin + addedCoin).toFixed(6);
+      const newUsd = +(newCoin * s.telemetry.coinPriceUsd).toFixed(4);
+
+      updates.sessionYield = newSessionYield;
+      updates.totalMined = newTotal;
+      updates.balanceCoin = newCoin;
+      updates.balanceUsd = newUsd;
+
+      try {
+        localStorage.setItem(
+          'nexus_real_earnings',
+          JSON.stringify({
+            totalMined: newTotal,
+            balanceCoin: newCoin,
+            balanceUsd: newUsd,
+            sharesAccepted: data.sharesAccepted,
+          })
+        );
+      } catch (e) {}
+    }
+
+    s.syncTelemetry(updates);
   });
 
   // Start real WASM mining if enabled
@@ -375,23 +416,12 @@ export function initEngine() {
     miningEngine.start(store.telemetry.mode);
   }
 
-  // Live session and balance ticker
+  // Live session timer only (no fake money increments)
   setInterval(() => {
     const s = useMiningStore.getState();
     if (s.telemetry.isMining) {
-      const yieldPerSec = (s.telemetry.totalHashrateMH * 0.000035);
-      const newSec = s.telemetry.sessionSeconds + 1;
-      const newYield = +(s.telemetry.sessionYield + yieldPerSec).toFixed(4);
-      const newTotal = +(s.telemetry.totalMined + yieldPerSec).toFixed(4);
-      const newCoin = +(s.telemetry.balanceCoin + yieldPerSec).toFixed(4);
-      const newUsd = +(newCoin * s.telemetry.coinPriceUsd).toFixed(2);
-
       s.syncTelemetry({
-        sessionSeconds: newSec,
-        sessionYield: newYield,
-        totalMined: newTotal,
-        balanceCoin: newCoin,
-        balanceUsd: newUsd,
+        sessionSeconds: s.telemetry.sessionSeconds + 1,
       });
     }
   }, 1000);

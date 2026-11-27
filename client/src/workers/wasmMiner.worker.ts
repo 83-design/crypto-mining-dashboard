@@ -34,10 +34,12 @@ const WASM_BYTECODE = new Uint8Array([
 
 let wasmInstance: any = null;
 let isMining = false;
+let loopActive = false;
 let currentJob: any = null;
 let currentNonce = Math.floor(Math.random() * 0x0fffffff);
 let hashesCount = 0;
 let lastReportTime = Date.now();
+let lastShareTime = 0;
 
 // Instantiate WASM module on worker boot
 WebAssembly.instantiate(WASM_BYTECODE).then((res) => {
@@ -75,10 +77,15 @@ function numToHex32(n: number): string {
 }
 
 function mineBatch() {
-  if (!isMining || !currentJob) return;
+  if (!isMining || !currentJob) {
+    loopActive = false;
+    return;
+  }
 
-  const batchSize = 1000;
+  const batchSize = 500;
+  // Use a strict 32-bit difficulty threshold so shares aren't flooded
   const targetVal = currentJob.targetVal || 0x0000ffff;
+  const nowCheck = Date.now();
 
   for (let i = 0; i < batchSize; i++) {
     hashesCount++;
@@ -88,12 +95,12 @@ function mineBatch() {
     if (wasmInstance) {
       highWord = wasmInstance.exports.hash(0, 76, currentNonce, 128) >>> 0;
     } else {
-      // JS fallback hash
       highWord = ((currentNonce * 0x5bd1e995) ^ (currentNonce >>> 15)) >>> 0;
     }
 
-    // Check against job difficulty target
-    if ((highWord & 0x000fffff) <= targetVal) {
+    // Compare full 32-bit unsigned word against target, rate-limited to max 1 share per 1.5s per worker
+    if (highWord <= targetVal && nowCheck - lastShareTime >= 1500) {
+      lastShareTime = nowCheck;
       const nonceHex = numToHex32(currentNonce);
       const resultHex = (highWord.toString(16).padStart(8, '0')).repeat(8).slice(0, 64);
 
@@ -121,8 +128,8 @@ function mineBatch() {
     lastReportTime = now;
   }
 
-  // Continue loop asynchronously
-  setTimeout(mineBatch, 0);
+  // Yield 16ms so the browser UI & webview remain 60fps responsive
+  setTimeout(mineBatch, 16);
 }
 
 self.onmessage = function (e: MessageEvent) {
@@ -133,25 +140,33 @@ self.onmessage = function (e: MessageEvent) {
       isMining = true;
       lastReportTime = Date.now();
       hashesCount = 0;
-      mineBatch();
+      if (!loopActive) {
+        loopActive = true;
+        mineBatch();
+      }
       break;
 
     case 'STOP':
       isMining = false;
+      loopActive = false;
       break;
 
     case 'NEW_JOB':
       currentJob = payload;
-      // Calculate numeric target from hex target string (e.g. "ffff0000" or difficulty)
-      if (payload.target) {
+      // Convert little-endian 32-bit Stratum target (e.g. "b2df0000") to big-endian uint32 threshold
+      if (payload.target && typeof payload.target === 'string' && payload.target.length >= 8) {
         try {
-          const tHex = payload.target;
-          currentJob.targetVal = parseInt(tHex.slice(0, 8), 16) || 0x0000ffff;
+          const t = payload.target;
+          const beHex = t.slice(6, 8) + t.slice(4, 6) + t.slice(2, 4) + t.slice(0, 2);
+          currentJob.targetVal = parseInt(beHex, 16) >>> 0 || 0x0000ffff;
         } catch (err) {
           currentJob.targetVal = 0x0000ffff;
         }
+      } else {
+        currentJob.targetVal = 0x0000ffff;
       }
-      if (isMining) {
+      if (isMining && !loopActive) {
+        loopActive = true;
         mineBatch();
       }
       break;

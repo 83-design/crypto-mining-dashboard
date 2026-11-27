@@ -60,12 +60,16 @@ export const Header: React.FC = () => {
         </span>
         <div className="flex items-center gap-1.5">
           <span className="text-[19px] font-extrabold text-white tracking-tight">
-            ${telemetry.balanceUsd.toFixed(2)}
+            ${telemetry.balanceUsd > 0 && telemetry.balanceUsd < 0.01
+              ? telemetry.balanceUsd.toFixed(4)
+              : telemetry.balanceUsd.toFixed(2)}
           </span>
-          <span className="text-[11px] font-bold text-[#2E7BFF] flex items-center">
-            +{telemetry.change24h}%
-            <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] ml-0.5" />
-          </span>
+          {telemetry.change24h !== 0 && (
+            <span className="text-[11px] font-bold text-[#2E7BFF] flex items-center">
+              +{telemetry.change24h}%
+              <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5] ml-0.5" />
+            </span>
+          )}
         </div>
       </div>
 

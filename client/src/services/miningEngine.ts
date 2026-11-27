@@ -273,10 +273,6 @@ export class MiningEngine {
         },
       };
       this.ws.send(JSON.stringify(submitMsg));
-    } else {
-      // Local accepted share simulation when offline
-      this.sharesAccepted++;
-      this.emitTelemetry();
     }
   }
 
