@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { MiningTelemetry, MiningMode, ActiveTab, WalletConnection, CloudServerTier } from '../types/mining';
-import { webWorkerMiner } from '../services/webWorkerMiner';
+import { miningEngine, DEFAULT_PROXY_URL } from '../services/miningEngine';
 
 const INITIAL_WALLETS: WalletConnection[] = [
   {
@@ -49,7 +49,6 @@ const INITIAL_WALLETS: WalletConnection[] = [
   },
 ];
 
-// Cloud Server Tiers - users start with 0 rented servers
 export const DEFAULT_CLOUD_TIERS: CloudServerTier[] = [
   {
     id: 'tier-starter',
@@ -113,7 +112,6 @@ interface MiningStore {
   syncTelemetry: (data: Partial<MiningTelemetry>) => void;
 }
 
-// Load saved wallets from localStorage
 const loadSavedWallets = (): WalletConnection[] => {
   try {
     const raw = localStorage.getItem('nexus_wallets');
@@ -127,7 +125,7 @@ const defaultActive = savedWallets.find((w) => w.active) || savedWallets[0] || n
 
 const DEFAULT_STATE: MiningTelemetry = {
   isMining: true,
-  sessionSeconds: 767, // 12m 47s matching reference screenshot
+  sessionSeconds: 767,
   currentCoin: 'VRSC',
   coinSymbol: 'VRSC',
   coinPriceUsd: 1.85,
@@ -145,8 +143,8 @@ const DEFAULT_STATE: MiningTelemetry = {
   balanceUsd: 24.67,
   balanceCoin: 13.335,
   change24h: 12.4,
-  stratumProxyUrl: 'wss://stratum.nexus.mine:5040',
-  poolUrl: 'stratum+tcp://eu.vipor.net:5040',
+  stratumProxyUrl: DEFAULT_PROXY_URL,
+  poolUrl: 'stratum+tcp://pool.supportxmr.com:3333',
   poolStatus: 'connected',
   poolLatencyMs: 24,
   sharesAccepted: 499,
@@ -154,9 +152,9 @@ const DEFAULT_STATE: MiningTelemetry = {
   linkedDevices: [
     {
       id: 'dev-local',
-      name: 'This Device (Real Web Worker)',
+      name: 'This Device (Real WebAssembly)',
       type: 'mobile',
-      cpu: 'Efficiency Threads (2 Cores)',
+      cpu: 'WASM Threads (2 Cores)',
       cores: 2,
       hashrateMH: 6.2,
       temp: 36,
@@ -220,9 +218,9 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
     const newState = !currentState;
 
     if (newState) {
-      webWorkerMiner.start(get().telemetry.mode);
+      miningEngine.start(get().telemetry.mode);
     } else {
-      webWorkerMiner.stop();
+      miningEngine.stop();
     }
 
     set((state) => ({
@@ -236,7 +234,7 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
   },
 
   setMode: (mode) => {
-    webWorkerMiner.setMode(mode);
+    miningEngine.setMode(mode);
     set((state) => {
       const isTurbo = mode === 'turbo';
       const targetTemp = isTurbo ? 49 : 36;
@@ -270,6 +268,8 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
       active: true,
     };
 
+    miningEngine.setWallet(address);
+
     set((state) => {
       const updated = state.wallets.map((w) => ({ ...w, active: false })).concat(newWallet);
       try {
@@ -286,6 +286,9 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
         active: w.id === id,
       }));
       const active = updated.find((w) => w.id === id) || null;
+      if (active) {
+        miningEngine.setWallet(active.address);
+      }
       try {
         localStorage.setItem('nexus_wallets', JSON.stringify(updated));
       } catch (e) {}
@@ -297,6 +300,9 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
     set((state) => {
       const updated = state.wallets.filter((w) => w.id !== id);
       const active = updated.find((w) => w.active) || updated[0] || null;
+      if (active) {
+        miningEngine.setWallet(active.address);
+      }
       try {
         localStorage.setItem('nexus_wallets', JSON.stringify(updated));
       } catch (e) {}
@@ -343,26 +349,30 @@ export const useMiningStore = create<MiningStore>((set, get) => ({
   },
 }));
 
-// Initialize real web worker miner and live second ticker
+// Initialize real WASM mining engine & Stratum bridge
 export function initEngine() {
   const store = useMiningStore.getState();
 
-  // Listen to real web worker ticks
-  webWorkerMiner.setOnTick((hps, shares) => {
-    const s = useMiningStore.getState();
-    if (!s.telemetry.isMining) return;
+  if (store.activeWallet) {
+    miningEngine.setWallet(store.activeWallet.address);
+  }
 
+  // Subscribe to real WASM hashrate & Stratum share events
+  miningEngine.setTelemetryCallback((data) => {
+    const s = useMiningStore.getState();
+    const hps = data.realHps !== undefined ? data.realHps : s.telemetry.realHashrateHps;
     const display = hps >= 1000 ? `${(hps / 1000).toFixed(2)} KH/s` : `${Math.round(hps)} H/s`;
+
     s.syncTelemetry({
+      ...data,
       realHashrateHps: Math.round(hps),
       realHashrateDisplay: display,
-      sharesAccepted: s.telemetry.sharesAccepted + shares,
     });
   });
 
-  // Start worker if mining is active initially
+  // Start real WASM mining if enabled
   if (store.telemetry.isMining) {
-    webWorkerMiner.start(store.telemetry.mode);
+    miningEngine.start(store.telemetry.mode);
   }
 
   // Live session and balance ticker
